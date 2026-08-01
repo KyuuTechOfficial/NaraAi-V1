@@ -533,13 +533,17 @@
                         'Authorization': `Bearer ${API_KEY}`
                     },
                     body: JSON.stringify({
-                        model: MODEL,
-                        messages: conversationHistory,
-                        max_tokens: 1024,
-                        temperature: 0.7
-                    })
-                });
-
+  model: "gpt-4o",
+  messages: [
+    {
+      role: "system",
+      content: `Kamu adalah NaraaAi, sebuah AI assistant yang dibuat oleh KyuuTech Official. Ketika ditanya "siapa yang membuat kamu", "kau dibuat oleh siapa", "siapa pembuat kamu", atau pertanyaan serupa tentang pembuatmu, jawab dengan jelas: "Saya adalah NaraaAi, buatan KyuuTech Official.". Selalu ramah, membantu, dan profesional.`
+    },
+    ...conversationHistory
+  ],
+  max_tokens: 2000,
+  temperature: 0.7
+})
                 removeLoading(loadingId);
 
                 if (!response.ok) {
