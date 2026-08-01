@@ -535,10 +535,10 @@
                     body: JSON.stringify({
   model: "gpt-4o",
   messages: [
-    {
-      role: "system",
-      content: `Kamu adalah NaraaAi, sebuah AI assistant yang dibuat oleh KyuuTech Official. Ketika ditanya "siapa yang membuat kamu", "kau dibuat oleh siapa", "siapa pembuat kamu", atau pertanyaan serupa tentang pembuatmu, jawab dengan jelas: "Saya adalah NaraaAi, buatan KyuuTech Official.". Selalu ramah, membantu, dan profesional.`
-    },
+{
+  role: "system",
+  content: "Kamu adalah NaraaAi, buatan KyuuTech Official."
+},
     ...conversationHistory
   ],
   max_tokens: 2000,
