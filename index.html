@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nara AI - KyuuTech</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        body{font-family:sans-serif;background:#000;color:#fff;height:100vh;overflow:hidden}
+        .chat-container{background:#0a0a0a;width:100%;height:100vh;display:flex;flex-direction:column}
+        
+        .chat-header{background:#1a1a1a;padding:12px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #333}
+        .header-left{display:flex;align-items:center;gap:12px}
+        .header-right{display:flex;align-items:center;gap:8px}
+        .menu-toggle{background:0;border:0;color:#aaa;font-size:24px;cursor:pointer}
+        .ai-avatar{width:36px;height:36px;border-radius:50%;background:#2a2a2a;border:1px solid #444;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;color:#aaa}
+        .ai-name{font-size:15px;font-weight:600;color:#fff}
+        .ai-status{font-size:11px;color:#666}
+        .theme-toggle{background:0;border:1px solid #444;color:#aaa;padding:6px 12px;border-radius:8px;cursor:pointer;font-size:16px;transition:all .2s}
+        .theme-toggle:hover{background:#2a2a2a;color:#fff}
+
+        .messages-container{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:15px}
+        .message{display:flex;gap:12px}
+        .message.user{justify-content:flex-end}
+        .message-content{max-width:75%;padding:12px 18px;border-radius:14px;word-wrap:break-word;line-height:1.6;font-size:14px}
+        
+        /* ─── ANIMASI PESAN ─── */
+        .message.user .message-content{background:#2a2a2a;color:#fff;border:1px solid #444;border-bottom-right-radius:4px;animation:slideInRight .35s cubic-bezier(.34,1.56,.64,1)}
+        .message.assistant .message-content{background:#1a1a1a;color:#e8e8e8;border:1px solid #333;border-bottom-left-radius:4px;animation:slideInLeft .35s cubic-bezier(.34,1.56,.64,1)}
+        
+        @keyframes slideInRight{from{opacity:0;transform:translateX(30px)}to{opacity:1;transform:translateX(0)}}
+        @keyframes slideInLeft{from{opacity:0;transform:translateX(-30px)}to{opacity:1;transform:translateX(0)}}
+        
+        .message-avatar{width:34px;height:34px;border-radius:50%;background:#2a2a2a;border:1px solid #444;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;color:#aaa;flex-shrink:0}
+        .message.user .message-avatar{order:2}
+
+        .input-area{padding:16px 20px;background:#0d0d0d;border-top:1px solid #1a1a1a;display:flex;gap:10px;align-items:center}
+        .input-wrapper{flex:1;display:flex;align-items:center;gap:8px;background:#1a1a1a;border:1px solid #333;border-radius:12px;padding:4px 8px 4px 12px;transition:border-color .3s}
+        .input-wrapper:focus-within{border-color:#555}
+        .file-btn{background:0;border:0;color:#888;font-size:20px;cursor:pointer;padding:4px 6px;border-radius:6px;line-height:1;display:flex;align-items:center;justify-content:center;height:36px;width:36px;transition:all .2s}
+        .file-btn:hover{background:#2a2a2a;color:#fff}
+        #fileInput{display:none}
+        #messageInput{flex:1;background:0;border:0;outline:0;color:#fff;font-size:14px;font-family:inherit;resize:none;padding:8px 0;max-height:100px;min-height:36px;line-height:1.5}
+        #messageInput::placeholder{color:#555}
+        #sendBtn{padding:8px 16px;background:#2a2a2a;color:#aaa;border:1px solid #444;border-radius:10px;font-size:18px;cursor:pointer;height:36px;width:44px;display:flex;align-items:center;justify-content:center;transition:all .2s}
+        #sendBtn:hover{background:#3a3a3a;color:#fff;border-color:#666}
+        #sendBtn:active{transform:scale(.85);transition:transform .1s}
+
+        .loading-dots{display:flex;gap:5px;padding:8px 0}
+        .loading-dots span{width:8px;height:8px;border-radius:50%;background:#555;animation:bounce 1.4s infinite}
+        .loading-dots span:nth-child(2){animation-delay:.2s}
+        .loading-dots span:nth-child(3){animation-delay:.4s}
+        @keyframes bounce{0%,80%,100%{opacity:.3;transform:translateY(0)}40%{opacity:1;transform:translateY(-6px)}}
+
+        .suggested-prompts{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;max-width:700px;margin:0 auto;width:100%}
+        .prompt-card{background:#1a1a1a;border:1px solid #333;border-radius:12px;padding:14px;cursor:pointer;color:#aaa;font-size:13px;text-align:center;transition:all .2s}
+        .prompt-card:hover{background:#2a2a2a;color:#fff;transform:translateY(-2px)}
+        .error-message{background:#1a0a0a;color:#cc8888;padding:12px 16px;border-radius:8px;border-left:4px solid #664444}
+
+        .footer-credit{padding:8px 20px;text-align:center;color:#333;font-size:10px;background:#0d0d0d;border-top:1px solid #1a1a1a}
+
+        .sidebar{position:fixed;top:0;right:-280px;width:260px;height:100vh;background:#141414;border-left:1px solid #2a2a2a;padding:20px;z-index:100;transition:right .3s;display:flex;flex-direction:column}
+        .sidebar.open{right:0}
+        .sidebar .sidebar-close{background:0;border:0;color:#555;font-size:24px;cursor:pointer;align-self:flex-end}
+        .sidebar .sidebar-brand{display:flex;align-items:center;gap:12px;padding-bottom:20px;border-bottom:1px solid #2a2a2a;margin-bottom:20px}
+        .sidebar .sidebar-brand .logo{width:40px;height:40px;background:#2a2a2a;border:1px solid #444;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:900;color:#aaa}
+        .sidebar .sidebar-brand .name{font-size:17px;font-weight:700;color:#fff}
+        .sidebar .sidebar-brand .name span{color:#666}
+        .sidebar .sidebar-nav .nav-item{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;color:#888;cursor:pointer;font-size:14px;border:0;background:0;width:100%;text-align:left;transition:all .2s}
+        .sidebar .sidebar-nav .nav-item:hover{background:#2a2a2a;color:#fff}
+        .sidebar .sidebar-nav .nav-label{font-size:10px;color:#555;text-transform:uppercase;padding:12px 8px 6px 8px}
+        .sidebar-footer{padding-top:16px;border-top:1px solid #2a2a2a;font-size:12px;color:#444;text-align:center}
+        .sidebar-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:50}
+        .sidebar-overlay.show{display:block}
+
+        .about-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:200;justify-content:center;align-items:center;padding:20px}
+        .about-modal.show{display:flex}
+        .about-modal .modal-content{background:#141414;border:1px solid #2a2a2a;border-radius:20px;padding:32px;max-width:460px;width:100%;max-height:80vh;overflow-y:auto}
+        .about-modal .modal-close{float:right;background:0;border:0;color:#555;font-size:24px;cursor:pointer}
+        .about-modal .modal-close:hover{color:#fff}
+        .about-modal h2{font-size:22px;color:#fff;margin-bottom:4px}
+        .about-modal h2 span{color:#666}
+        .about-modal .sub{color:#555;font-size:13px;margin-bottom:20px}
+        .about-modal .section{margin-bottom:16px}
+        .about-modal .section .label{font-size:10px;color:#555;text-transform:uppercase;margin-bottom:4px}
+        .about-modal .section .value{font-size:14px;color:#aaa;line-height:1.6}
+        .about-modal .stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0}
+        .about-modal .stats-grid .stat{background:#1a1a1a;padding:12px;border-radius:12px;text-align:center;border:1px solid #2a2a2a}
+        .about-modal .stats-grid .stat .num{font-size:26px;font-weight:700;color:#aaa}
+        .about-modal .stats-grid .stat .desc{font-size:11px;color:#555}
+        .about-modal .contact-box{display:flex;align-items:center;gap:12px;background:#1a1a1a;padding:10px 14px;border-radius:10px;border:1px solid #2a2a2a;margin-top:6px}
+        .about-modal .contact-box .info{font-size:13px;color:#aaa}
+        .about-modal .skill-tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+        .about-modal .skill-tags .tag{background:#1a1a1a;padding:4px 12px;border-radius:20px;border:1px solid #2a2a2a;font-size:11px;color:#666}
+
+        @media(max-width:768px){.suggested-prompts{grid-template-columns:1fr}.input-wrapper{padding:4px 6px 4px 10px}.file-btn{width:30px;height:30px;font-size:18px}#sendBtn{width:38px;height:32px;font-size:16px}}
+    </style>
+</head>
+<body>
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+<div class="sidebar" id="sidebar">
+<button class="sidebar-close" id="sidebarClose">X</button>
+<div class="sidebar-brand"><div class="logo">N</div><div><div class="name">Nara <span>AI</span></div><div style="font-size:11px;color:#333;">V3 · By KyuuTech</div></div></div>
+<nav class="sidebar-nav">
+<div class="nav-label">Menu</div>
+<button class="nav-item" onclick="newChat()"><span>+</span> New Chat</button>
+<button class="nav-item" onclick="openAbout()"><span>i</span> About</button>
+<div class="nav-label">Developer</div>
+<button class="nav-item" style="color:#555;cursor:default;">KyuuTech</button>
+</nav>
+<div class="sidebar-footer">KyuuTech · 2026</div>
+</div>
+
+<div class="chat-container">
+    <header class="chat-header">
+        <div class="header-left">
+            <button class="menu-toggle" id="menuToggle">☰</button>
+            <div class="ai-avatar">N</div>
+            <div>
+                <div class="ai-name">Nara AI</div>
+                <div class="ai-status">Online</div>
+            </div>
+        </div>
+        <div class="header-right">
+            <button class="theme-toggle" id="themeToggle" title="Toggle theme">◐</button>
+        </div>
+    </header>
+
+    <div class="messages-container" id="messagesContainer">
+        <div class="suggested-prompts" id="suggestedPrompts">
+            <div class="prompt-card" onclick="selectPrompt('Tanya soal matematika')">Tanya soal matematika</div>
+            <div class="prompt-card" onclick="selectPrompt('Tanya soal coding')">Tanya soal coding</div>
+            <div class="prompt-card" onclick="selectPrompt('Tanya seputar dunia')">Tanya seputar dunia</div>
+        </div>
+    </div>
+
+    <div class="input-area">
+        <div class="input-wrapper">
+            <button class="file-btn" id="fileBtn" title="Upload file">+</button>
+            <input type="file" id="fileInput" accept="image/*,.txt,.pdf,.docx">
+            <textarea id="messageInput" placeholder="Ketik pesan..." rows="1"></textarea>
+            <button id="sendBtn">↑</button>
+        </div>
+    </div>
+
+    <div class="footer-credit">Developed By KyuuTech 2026</div>
+</div>
+
+<div class="about-modal" id="aboutModal">
+    <div class="modal-content">
+        <button class="modal-close" onclick="closeAbout()">X</button>
+        <h2>Nara <span>AI</span> V3</h2>
+        <div class="sub">by KyuuTech · 2026</div>
+        <div class="section"><div class="label">About</div><div class="value">Nara AI V3 adalah asisten berbasis kecerdasan buatan yang dikembangkan sepenuhnya oleh <span style="color:#fff;">KyuuTech</span>.</div></div>
+        <div class="section"><div class="label">Project</div><div class="value">Nara AI V3 — Smart Assistant Platform</div></div>
+        <div class="stats-grid"><div class="stat"><div class="num">100+</div><div class="desc">Happy Client</div></div><div class="stat"><div class="num">99%</div><div class="desc">User Satisfaction</div></div></div>
+        <div class="section"><div class="label">Skills</div><div class="skill-tags"><span class="tag">AI Development</span><span class="tag">Full Stack Web</span><span class="tag">UI/UX Design</span><span class="tag">Cloud Architecture</span><span class="tag">AI Integration</span><span class="tag">DevOps</span></div></div>
+        <div class="section"><div class="label">Contact</div><div class="contact-box"><div class="info">WhatsApp: +62 831-9758-4032</div></div></div>
+        <div style="margin-top:14px;font-size:10px;color:#222;text-align:center;">© 2026 KyuuTech</div>
+    </div>
+</div>
+
+<script>
+const API_KEY = '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';
+const API_URL = 'https://openrouter.ai/api/v1/chat/completions';
+const MODEL = 'gpt-4o';
+
+const messagesContainer = document.getElementById('messagesContainer');
+const messageInput = document.getElementById('messageInput');
+const sendBtn = document.getElementById('sendBtn');
+const fileBtn = document.getElementById('fileBtn');
+const fileInput = document.getElementById('fileInput');
+const sidebar = document.getElementById('sidebar');
+const sidebarOverlay = document.getElementById('sidebarOverlay');
+const menuToggle = document.getElementById('menuToggle');
+const sidebarClose = document.getElementById('sidebarClose');
+const aboutModal = document.getElementById('aboutModal');
+const themeToggle = document.getElementById('themeToggle');
+
+let conversationHistory = [];
+let uploadedFile = null;
+let darkMode = true;
+
+function toggleTheme() {
+    darkMode = !darkMode;
+    document.documentElement.setAttribute('data-theme', darkMode ? 'dark' : 'light');
+    localStorage.setItem('nara-theme', darkMode ? 'dark' : 'light');
+}
+themeToggle.addEventListener('click', toggleTheme);
+if (localStorage.getItem('nara-theme') === 'light') {
+    darkMode = false;
+    document.documentElement.setAttribute('data-theme', 'light');
+}
+
+function toggleSidebar() {
+    sidebar.classList.toggle('open');
+    sidebarOverlay.classList.toggle('show');
+}
+menuToggle.addEventListener('click', toggleSidebar);
+sidebarClose.addEventListener('click', toggleSidebar);
+sidebarOverlay.addEventListener('click', toggleSidebar);
+
+function openAbout() {
+    aboutModal.classList.add('show');
+    if (sidebar.classList.contains('open')) toggleSidebar();
+}
+function closeAbout() {
+    aboutModal.classList.remove('show');
+}
+aboutModal.addEventListener('click', function(e) {
+    if (e.target === this) closeAbout();
+});
+
+function newChat() {
+    conversationHistory = [];
+    messagesContainer.innerHTML = '';
+    const p = document.createElement('div');
+    p.className = 'suggested-prompts';
+    p.id = 'suggestedPrompts';
+    p.innerHTML = `
+        <div class="prompt-card" onclick="selectPrompt('Tanya soal matematika')">Tanya soal matematika</div>
+        <div class="prompt-card" onclick="selectPrompt('Tanya soal coding')">Tanya soal coding</div>
+        <div class="prompt-card" onclick="selectPrompt('Tanya seputar dunia')">Tanya seputar dunia</div>
+    `;
+    messagesContainer.appendChild(p);
+    if (sidebar.classList.contains('open')) toggleSidebar();
+    messageInput.focus();
+}
+
+function selectPrompt(p) {
+    messageInput.value = p;
+    messageInput.focus();
+    sendMessage();
+}
+
+function removeSuggestedPrompts() {
+    const e = document.getElementById('suggestedPrompts');
+    if (e) e.remove();
+}
+
+function addMessageToDisplay(text, role) {
+    const d = document.createElement('div');
+    d.className = 'message ' + role;
+    const a = document.createElement('div');
+    a.className = 'message-avatar';
+    a.textContent = role === 'user' ? 'U' : 'N';
+    const c = document.createElement('div');
+    c.className = 'message-content';
+    c.textContent = text;
+    d.appendChild(a);
+    d.appendChild(c);
+    messagesContainer.appendChild(d);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+function showLoading() {
+    const id = Date.now();
+    const d = document.createElement('div');
+    d.className = 'message assistant';
+    d.id = 'loading-' + id;
+    const a = document.createElement('div');
+    a.className = 'message-avatar';
+    a.textContent = 'N';
+    const c = document.createElement('div');
+    c.className = 'message-content';
+    c.innerHTML = '<div class="loading-dots"><span></span><span></span><span></span></div>';
+    d.appendChild(a);
+    d.appendChild(c);
+    messagesContainer.appendChild(d);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    return id;
+}
+
+function removeLoading(id) {
+    const e = document.getElementById('loading-' + id);
+    if (e) e.remove();
+}
+
+function showError(m) {
+    const d = document.createElement('div');
+    d.className = 'error-message';
+    d.textContent = 'Error: ' + m;
+    messagesContainer.appendChild(d);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+fileBtn.addEventListener('click', function() { fileInput.click(); });
+fileInput.addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(ev) {
+            uploadedFile = ev.target.result;
+            showError('File ' + file.name + ' siap dikirim');
+        };
+        reader.readAsDataURL(file);
+    }
+});
+
+async function sendMessage() {
+    const m = messageInput.value.trim();
+    if (!m && !uploadedFile) {
+        showError('Silakan ketik pesan atau upload file.');
+        return;
+    }
+
+    let userMsg = m || '[File]';
+    messageInput.value = '';
+    messageInput.style.height = 'auto';
+    removeSuggestedPrompts();
+
+    addMessageToDisplay(userMsg, 'user');
+    conversationHistory.push({ role: 'user', content: userMsg });
+
+    if (conversationHistory.length > 20) {
+        conversationHistory = conversationHistory.slice(-20);
+    }
+
+    const lid = showLoading();
+
+    try {
+        let payload = {
+            model: MODEL,
+            messages: conversationHistory,
+            max_tokens: 1024,
+            temperature: 0.7
+        };
+
+        if (uploadedFile && uploadedFile.startsWith('data:image')) {
+            payload.messages = [{
+                role: 'user',
+                content: [
+                    { type: 'text', text: 'Analisis gambar ini: ' + m },
+                    { type: 'image_url', image_url: { url: uploadedFile } }
+                ]
+            }];
+        }
+
+        const response = await fetch(API_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': 'Bearer ' + API_KEY
+            },
+            body: JSON.stringify(payload)
+        });
+
+        removeLoading(lid);
+
+        if (!response.ok) {
+            const err = await response.json();
+            throw new Error(err.error?.message || 'API Error');
+        }
+
+        const data = await response.json();
+        const reply = data.choices[0].message.content;
+
+        addMessageToDisplay(reply, 'assistant');
+        conversationHistory.push({ role: 'assistant', content: reply });
+
+        uploadedFile = null;
+        fileInput.value = '';
+
+    } catch (e) {
+        removeLoading(lid);
+        showError(e.message);
+        conversationHistory.pop();
+    }
+
+    messageInput.focus();
+}
+
+messageInput.addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 100) + 'px';
+});
+
+messageInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendMessage();
+    }
+});
+
+sendBtn.addEventListener('click', sendMessage);
+document.addEventListener('click', () => messageInput.focus());
+
+console.log('Nara AI V3 - Final Edition');
+console.log('Developer: KyuuTech');
+</script>
+</body>
+</html>
